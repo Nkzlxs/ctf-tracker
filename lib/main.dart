@@ -434,7 +434,7 @@ class _CTFEventsState extends State<CTFEvents>{
 
 	Widget _buildEvents(){
 		// No Ctf Events recorded
-		if(storedCTFEvents.isEmpty){	
+		if(this.displayCTFEvents.isEmpty){	
             return SmartRefresher(
 				controller: _refreshController,
 				enablePullDown: true,
@@ -525,7 +525,7 @@ class _CTFEventsState extends State<CTFEvents>{
 			context,
 			MaterialPageRoute(builder: (context) => CTFEventForm()) 
 		);
-		// print(result.ctfName);
+		print(result.ctfName);
 		if (result != null){
 			// Update the state of the context?
 			setState(() {
