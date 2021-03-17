@@ -1,0 +1,128 @@
+import "package:english_words/english_words.dart";
+
+
+class RandomWords extends StatefulWidget {
+
+	static const routeName = "random";
+
+    @override
+    _RandomWordsState createState() => _RandomWordsState();
+}
+
+class _RandomWordsState extends State<RandomWords> {
+
+    final _nameSuggestion = <WordPair>[];
+    final _18pxFont = TextStyle(fontSize: 18.0);
+
+    final _savedName = <WordPair>{};
+
+    Widget _buildRow(WordPair pair){
+
+        final isAlreadySaved = _savedName.contains(pair);
+        
+        return ListTile(
+            title: Text(
+                pair.asPascalCase,
+                style:_18pxFont
+            ),
+            trailing: Icon(
+                isAlreadySaved ? Icons.favorite:Icons.favorite_border,
+                color: isAlreadySaved? Colors.teal : null
+            ),
+			onTap: (){
+				setState(() {
+					if(isAlreadySaved){
+						_savedName.remove(pair);
+					} else {
+						_savedName.add(pair);
+					}  
+				});
+			}
+        );
+    }
+
+    Widget _buildSuggestions(){
+        return ListView.builder(
+            padding: EdgeInsets.all(32.0),
+            itemBuilder: (content,i){
+                if(i.isOdd)
+                    return Divider();
+                final index = i ~/ 2;
+                if (index >= _nameSuggestion.length){
+                    _nameSuggestion.addAll(generateWordPairs().take(10));
+                }
+
+                return _buildRow(_nameSuggestion[index]);
+            },
+        );
+    }
+
+	void _pushSaved(){
+		Navigator.of(context).push(
+			MaterialPageRoute<void>(
+				builder: (BuildContext context){
+					final tiles = _savedName.map(
+						(WordPair pair){
+							return ListTile(
+								title: Text(pair.asPascalCase, style:_18pxFont),
+								subtitle: Text("subtitle?"),
+							);
+						}
+					);
+
+					final divided = ListTile.divideTiles(
+						context: context,
+						tiles: tiles,
+						color: Colors.deepPurpleAccent
+					).toList();
+
+					return Scaffold(
+						appBar: AppBar(title: Text("Saved suggested names")),
+						body: ListView(children: divided)
+					);
+				}
+			),
+		);
+	}
+
+	void _goFirstRoute(){
+
+		List<ChallengeObject> d = [];
+		for(int i = 0; i < 5; i++){
+			ChallengeObject	tmp = new ChallengeObject("hi","hellowrod");
+			d.add(tmp);
+		}
+
+		Navigator.pushNamed(
+			context,
+			ChallengesList.routeName,
+			arguments: d
+			// MaterialPageRoute(builder: (context) => FirstRoute())
+		);
+	}
+
+	void _goSecondRoute(){
+		Navigator.pushNamed(
+			context,
+			ChallengeTimer.routeName,
+			arguments: ChallengeObject("yo","bitch")
+			// MaterialPageRoute(builder: (context) => SecondRoute())
+		);
+	}
+
+    @override
+    Widget build(BuildContext context) {
+
+        return Scaffold(
+            appBar: AppBar(
+				title: Text("ListView and SetState"),
+				actions: [
+					IconButton(icon: Icon(Icons.list),onPressed: _pushSaved),
+					IconButton(icon: Icon(Icons.account_circle_outlined), onPressed: _goFirstRoute),
+					IconButton(icon: Icon(Icons.looks_rounded), onPressed: _goSecondRoute)
+				],
+			),
+            body: _buildSuggestions()
+        );
+    }
+}
