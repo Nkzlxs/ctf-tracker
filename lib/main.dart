@@ -32,7 +32,7 @@ void main() async{
 				"CREATE TABLE ctfEvents(id INTEGER PRIMARY KEY AUTOINCREMENT, eventName TEXT, startTime TEXT, endTime TEXT, challengeLength INTEGER)",
 			);
             db.execute(
-                "CREATE TABLE eventChallenges(id INTEGER PRIMARY KEY AUTOINCREMENT, eventName TEXT, challengeName TEXT, category Text, challengeStartTime TEXT, challengeEndTime TEXT, isStarted INTEGER, isPaused INTEGER, isSolved INTEGER)",
+                "CREATE TABLE eventChallenges(id INTEGER PRIMARY KEY AUTOINCREMENT, eventName TEXT, challengeName TEXT, category Text, challengeStartTime TEXT, challengeEndTime TEXT, isStarted INTEGER, isPaused INTEGER, isSolved INTEGER, timeUsedInSeconds INTEGER)",
             );
             return db;
 		},
@@ -215,18 +215,13 @@ class _CTFEventsState extends State<CTFEvents>{
     List<CTFEventTable> storedCTFEvents = [];
 	List<CTFEventObject> displayCTFEvents = [];
 
-    List<CTFEventObject> currentNewCTFEvents = [];
-
 
     @override
     void initState() {
         super.initState();
         print("am i called before building?");
 
-        // this.brother();
-
         this.readDatabase();
-        // brother();
     }
 
     RefreshController _refreshController = RefreshController(initialRefresh: false);
@@ -259,120 +254,59 @@ class _CTFEventsState extends State<CTFEvents>{
                 storedCTFEvents.clear();
                 for(var event in tmp){
                     storedCTFEvents.add(event);
-                    // print("reading database");
-                    // // print(i.id);
+                    print("reading database");
                     print(event.eventName);
-                    // print(i.startTime);
-                    // print(i.endTime);
-                    // print(i.challengeLength);
-                    // print(i.challengeName);
-                    // print(i.category);
-                    // print(i.challengeStartTime);
-                    // print(i.challengeEndTime);
-                    // print(i.isStarted);
-                    // print(i.isPaused);
-                    // print(i.isSolved);
                 }
             }
         )
         // https://stackoverflow.com/questions/22082073/chaining-dart-futures-possible-to-access-intermediate-results
         .then(
-            (nothing) => this.parseStoredEvents()
-        );
-    }
+            (nothing){
+                print("Stored CTF Events length: " + storedCTFEvents.length.toString());
+                if(storedCTFEvents.length > 0){
+                    this.displayCTFEvents.clear();
+                    for(var i in storedCTFEvents){
+                        CTFEventObject event_obj = CTFEventObject();
+                        event_obj._ctfName = i.eventName;
+                        event_obj._startTime = DateTime.parse(i.startTime);
+                        event_obj._endTime = DateTime.parse(i.endTime);
 
-    void _parseStoredEvents(){
-        print("Stored CTF Events length: " + storedCTFEvents.length.toString());
-        // if(storedCTFEvents.length > 0){
-        //     String ctfName = storedCTFEvents[0].eventName;
-        //     CTFEventObject tmp = CTFEventObject();
 
-        //     for(var i in storedCTFEvents){
-        //         if(i.eventName == ctfName){
-        //             tmp.ctfName = i.eventName;
-        //             tmp.setStartEndTime(DateTime.parse(i.startTime), DateTime.parse(i.endTime));
+                        /*
+                            get all challenges by the name of the event
+                        */
 
-        //             ChallengeObject tmp2 = ChallengeObject(i.category, i.challengeName);
-        //             tmp2._isSolved = (i.isSolved==1?true:false);
-        //             tmp2._isStarted = (i.isStarted==1?true:false);
-        //             tmp2._isPaused = (i.isPaused==1?true:false);
-        //             if(tmp2.isSolved){
-        //                 print("hi first if");
+                        Future<List<CTFChallengeTable>> allEventChallenges = getChallenges(i.eventName);
+                        allEventChallenges.then(
+                            (List<CTFChallengeTable> allStoredChallenge){
+                                for(var storedChallenge in allStoredChallenge){
+                                    ChallengeObject chall_obj = ChallengeObject(storedChallenge.category, storedChallenge.challengeName);
 
-        //                 tmp2._solveTime = DateTime.parse(i.challengeEndTime);
-        //                 tmp2._timeUsed = DateTime.parse(i.challengeEndTime).difference(DateTime.parse(i.challengeStartTime));
-        //             }
-        //             if(tmp2.isStarted){
-        //                 tmp2._startTime = DateTime.parse(i.challengeStartTime);
-        //             }
-        //             tmp.challenges.add(tmp2);
-        //         }
-        //         else{
+                                    chall_obj._isSolved = (storedChallenge.isSolved==1?true:false);
+                                    chall_obj._isStarted = (storedChallenge.isStarted==1?true:false);
+                                    chall_obj._isPaused = (storedChallenge.isPaused==1?true:false);
+                                    chall_obj._timeUsed = Duration(seconds:storedChallenge.timeUsedInSeconds);
 
-        //             this.displayCTFEvents.add(tmp);
+                                    if(chall_obj.isSolved){
+                                        print("hello");
+                                        chall_obj._solveTime = DateTime.parse(storedChallenge.challengeEndTime);
+                                        // dddd._timeUsed = DateTime.parse(ddd.challengeEndTime).difference(DateTime.parse(ddd.challengeStartTime));
+                                    }
+                                    if(chall_obj.isStarted){
+                                        chall_obj._startTime = DateTime.parse(storedChallenge.challengeStartTime);
+                                    }
 
-        //             tmp = new CTFEventObject();
-        //             ctfName = i.eventName;
 
-        //             tmp.ctfName = i.eventName;
-        //             tmp.setStartEndTime(DateTime.parse(i.startTime), DateTime.parse(i.endTime));
-
-        //             ChallengeObject tmp2 = ChallengeObject(i.category, i.challengeName);
-        //             tmp2._isSolved = (i.isSolved==1?true:false);
-        //             tmp2._isStarted = (i.isStarted==1?true:false);
-        //             tmp2._isPaused = (i.isPaused==1?true:false);
-        //             if(tmp2.isSolved){
-        //                 print("hi else");
-
-        //                 tmp2._solveTime = DateTime.parse(i.challengeEndTime);
-        //                 tmp2._timeUsed = DateTime.parse(i.challengeEndTime).difference(DateTime.parse(i.challengeStartTime));
-        //             }
-        //             if(tmp2.isStarted){
-        //                 tmp2._startTime = DateTime.parse(i.challengeStartTime);
-        //             }
-        //             tmp.challenges.add(tmp2);
-        //         }
-        //     }
-        //     this.displayCTFEvents.add(tmp);
-        // }
-
-    }
-
-    void parseStoredEvents(){
-        print("Stored CTF Events length: " + storedCTFEvents.length.toString());
-        if(storedCTFEvents.length > 0){
-            this.displayCTFEvents.clear();
-            for(var i in storedCTFEvents){
-                CTFEventObject tmp = CTFEventObject();
-                tmp._ctfName = i.eventName;
-                tmp._startTime = DateTime.parse(i.startTime);
-                tmp._endTime = DateTime.parse(i.endTime);
-
-                Future<List<CTFChallengeTable>> d = getChallenges(i.eventName);
-                d.then(
-                    (List<CTFChallengeTable> dd){
-                        for(var ddd in dd){
-                            ChallengeObject dddd = ChallengeObject(ddd.category, ddd.challengeName);
-                            dddd._isSolved = (ddd.isSolved==1?true:false);
-                            dddd._isStarted = (ddd.isStarted==1?true:false);
-                            dddd._isPaused = (ddd.isPaused==1?true:false);
-                            if(dddd.isSolved){
-                                print("hello");
-
-                                dddd._solveTime = DateTime.parse(ddd.challengeEndTime);
-                                dddd._timeUsed = DateTime.parse(ddd.challengeEndTime).difference(DateTime.parse(ddd.challengeStartTime));
+                                    event_obj.challenges.add(chall_obj);
+                                }
                             }
-                            if(dddd.isStarted){
-                                dddd._startTime = DateTime.parse(ddd.challengeStartTime);
-                            }
-                            tmp.challenges.add(dddd);
-                        }
+                        ).then(
+                            (nothing) => this.displayCTFEvents.add(event_obj)
+                        );
                     }
-                ).then(
-                    (nothing) => this.displayCTFEvents.add(tmp)
-                );
+                }
             }
-        }
+        );
     }
 
 	@override
@@ -497,12 +431,10 @@ class _CTFEventsState extends State<CTFEvents>{
 			context,
 			MaterialPageRoute(builder: (context) => CTFEventForm()) 
 		);
-		print(result.ctfName);
 		if (result != null){
 			// Update the state of the context?
 			setState(() {
 				displayCTFEvents.add(result);
-                currentNewCTFEvents.add(result);
 			});
 		}
 	}
@@ -512,6 +444,9 @@ class _CTFEventsState extends State<CTFEvents>{
         deleteAllCTFEvent()
         .then((wat)=>deleteAllChallenges())
         .then((wat){
+            /*
+                insert all event
+            */
             for(var i in displayCTFEvents){
                 CTFEventObject a = i.eventStatus();
                 CTFEventTable tmp = CTFEventTable(
@@ -522,18 +457,24 @@ class _CTFEventsState extends State<CTFEvents>{
                     challengeLength:      a.challenges.length,
                   
                 );
+       
                 insertCTFEvent(tmp);
+
+                /*
+                    insert all challenges
+                */
                 for(var chall in i.challenges){
                     CTFChallengeTable tmp_chall = CTFChallengeTable(
-                        id:                   null,
-                        eventName:            i._ctfName,
-                        challengeName:        chall.challengeName,
-                        category:             chall.category,
-                        challengeStartTime:   (chall.startTime==null?null:chall.startTime.toIso8601String()),
-                        challengeEndTime:     (chall._solveTime==null?null:chall._solveTime.toIso8601String()),
-                        isStarted:            chall.isStarted==true?1:0,
-                        isPaused:             chall.isPaused==true?1:0,
-                        isSolved:             chall.isSolved==true?1:0,
+                        id:                     null,
+                        eventName:              i._ctfName,
+                        challengeName:          chall.challengeName,
+                        category:               chall.category,
+                        challengeStartTime:     (chall.startTime==null?null:chall.startTime.toIso8601String()),
+                        challengeEndTime:       (chall._solveTime==null?null:chall._solveTime.toIso8601String()),
+                        isStarted:              chall.isStarted==true?1:0,
+                        isPaused:               chall.isPaused==true?1:0,
+                        isSolved:               chall.isSolved==true?1:0,
+                        timeUsedInSeconds:      chall.timeUsed.inSeconds,
                     );
                     insertChallenge(tmp_chall);
                 }
@@ -560,7 +501,8 @@ class ChallengeObject{
 	bool _isSolved = false;
 	DateTime _startTime;
 	DateTime _solveTime;
-	Duration _timeUsed;
+	Duration _timeUsed = Duration();
+
 
 	ChallengeObject(this.category,this.challengeName);
 
@@ -573,10 +515,12 @@ class ChallengeObject{
 	bool get isPaused => this._isPaused;
 	set isPaused(bool value){
 		this._isPaused = value;
+        this._timeUsed += DateTime.now().difference(this._startTime);
 	}
 	void resume(){
 		this._isStarted = true;
 		this._isPaused = false;
+        this._startTime = DateTime.now();
 	}
 
 	bool get isEnded => this._isEnded;
@@ -589,7 +533,7 @@ class ChallengeObject{
 		if(this._isStarted && !this._isPaused && !this._isEnded && !this._isSolved){
 			this._isSolved = true;
 			this._solveTime = DateTime.now();
-			this._timeUsed = this._solveTime.difference(this._startTime);
+			this._timeUsed += this._solveTime.difference(this._startTime);
             return true;
 		}
 		// print(this.isStarted);
@@ -610,7 +554,8 @@ class ChallengeObject{
 		if(this.isStarted && this.isPaused)
 			return "Challenge Paused";
 		if(this.isStarted && !this.isPaused && !this.isSolved){
-            int tU = DateTime.now().difference(this._startTime).inSeconds;
+
+            int tU = DateTime.now().difference(this._startTime).inSeconds + this.timeUsed.inSeconds;
             int tU_hr = tU ~/ 3600;
             int tU_m = (tU % 3600) ~/ 60;
             int tU_s = (tU % 3600) % 60;
@@ -1182,6 +1127,8 @@ class CTFChallengeTable{
 	final int 			isStarted;
 	final int 			isPaused;
 	final int 			isSolved;
+    final int           timeUsedInSeconds;
+
 
 	CTFChallengeTable(
 		{
@@ -1193,7 +1140,8 @@ class CTFChallengeTable{
 			this.challengeEndTime,
 			this.isStarted,
 			this.isPaused,
-			this.isSolved
+			this.isSolved,
+            this.timeUsedInSeconds
 		}
 	);
 
@@ -1210,6 +1158,7 @@ class CTFChallengeTable{
 			"isStarted":			isStarted,
 			"isPaused":				isPaused,
 			"isSolved":				isSolved,
+            "timeUsedInSeconds":    timeUsedInSeconds,
 		};
 	}
 }
@@ -1245,6 +1194,7 @@ Future<List<CTFChallengeTable>> getChallenges(String eventName) async {
             isStarted: 				maps[i]["isStarted"],
             isPaused: 				maps[i]["isPaused"],
             isSolved: 				maps[i]["isSolved"],
+            timeUsedInSeconds:      maps[i]["timeUsedInSeconds"],
         );
     });
 }
