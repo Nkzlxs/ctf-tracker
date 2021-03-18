@@ -9,77 +9,6 @@ import "package:sqflite/sqflite.dart";
 
 Future<Database> the_database;
 
-// Define a function that inserts dogs into the database
-Future<void> insertCTFEvent(CTFEventTable ctfEventTable) async {
-	// Get a reference to the database.
-	final Database db = await the_database;
-    // Insert the Dog into the correct table. You might also specify the
-    // `conflictAlgorithm` to use in case the same dog is inserted twice.
-    //
-    // In this case, replace any previous data.
-    await db.insert(
-        'ctfEvents',
-        ctfEventTable.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    print("inserting into table");
-}
-// A method that retrieves all the dogs from the dogs table.
-Future<List<CTFEventTable>> getCTFEvents() async {
-	// Get a reference to the database.
-	final Database db = await the_database;
-	// Query the table for all The Dogs.
-	final List<Map<String, dynamic>> maps = await db.query('ctfEvents');
-
-	// Convert the List<Map<String, dynamic> into a List<Dog>.
-	return List.generate(maps.length, (i) {
-		return CTFEventTable(
-			id: 					maps[i]["id"],
-			eventName: 				maps[i]["eventName"],
-			startTime: 				maps[i]["startTime"],
-			endTime: 				maps[i]["endTime"],
-			challengeName: 			maps[i]["challengeName"],
-			category: 				maps[i]["category"],
-			challengeStartTime: 	maps[i]["challengeStartTime"],
-			challengeEndTime: 		maps[i]["challengeEndTime"],
-			isStarted: 				maps[i]["isStarted"],
-			isPaused: 				maps[i]["isPaused"],
-			isSolved: 				maps[i]["isSolved"],
-		);
-	});
-}
-
-Future<void> updateCTFEvent(CTFEventTable ctfEvent) async {
-	// Get a reference to the database.
-	final db = await the_database;
-
-	// Update the given Dog.
-	await db.update(
-		'ctfEvents',
-		ctfEvent.toMap(),
-		// Ensure that the Dog has a matching id.
-		where: "id = ?",
-		// Pass the Dog's id as a whereArg to prevent SQL injection.
-		whereArgs: [ctfEvent.id],
-	);
-}
-Future<void> deleteCTFEvent(int id) async {
-	// Get a reference to the database.
-	final db = await the_database;
-
-	// Remove the Dog from the Database.
-	await db.delete(
-		'ctfEvents',
-		// Use a `where` clause to delete a specific dog.
-		where: "id = ?",
-		// Pass the Dog's id as a whereArg to prevent SQL injection.
-		whereArgs: [id],
-	);
-}
-
-
-
-
 void main() async{
 
 	// Avoid errors caused by flutter upgrade.
@@ -99,9 +28,13 @@ void main() async{
 
 		onCreate: (db,version){
 			print("onCreating");
-			return db.execute(
-				"CREATE TABLE ctfEvents(id INTEGER PRIMARY KEY AUTOINCREMENT, eventName TEXT, startTime TEXT, endTime TEXT, challengeName TEXT, category Text, challengeStartTime TEXT, challengeEndTime TEXT, isStarted INTEGER, isPaused INTEGER, isSolved INTEGER)",
+			db.execute(
+				"CREATE TABLE ctfEvents(id INTEGER PRIMARY KEY AUTOINCREMENT, eventName TEXT, startTime TEXT, endTime TEXT, challengeLength INTEGER)",
 			);
+            db.execute(
+                "CREATE TABLE eventChallenges(id INTEGER PRIMARY KEY AUTOINCREMENT, eventName TEXT, challengeName TEXT, category Text, challengeStartTime TEXT, challengeEndTime TEXT, isStarted INTEGER, isPaused INTEGER, isSolved INTEGER)",
+            );
+            return db;
 		},
 
 		version: 1,
@@ -318,18 +251,20 @@ class _CTFEventsState extends State<CTFEvents>{
 		_refreshController.loadComplete();
 	}
 
-    void readDatabase(){
+    Future<void> readDatabase() async{
         databaseCTFEvents = getCTFEvents();
         databaseCTFEvents
         .then(
             (List<CTFEventTable> tmp){
-                for(var i in tmp){
-                    storedCTFEvents.add(i);
-                    print("reading database");
-                    // print(i.id);
-                    // print(i.eventName);
+                storedCTFEvents.clear();
+                for(var event in tmp){
+                    storedCTFEvents.add(event);
+                    // print("reading database");
+                    // // print(i.id);
+                    print(event.eventName);
                     // print(i.startTime);
                     // print(i.endTime);
+                    // print(i.challengeLength);
                     // print(i.challengeName);
                     // print(i.category);
                     // print(i.challengeStartTime);
@@ -346,61 +281,98 @@ class _CTFEventsState extends State<CTFEvents>{
         );
     }
 
+    void _parseStoredEvents(){
+        print("Stored CTF Events length: " + storedCTFEvents.length.toString());
+        // if(storedCTFEvents.length > 0){
+        //     String ctfName = storedCTFEvents[0].eventName;
+        //     CTFEventObject tmp = CTFEventObject();
+
+        //     for(var i in storedCTFEvents){
+        //         if(i.eventName == ctfName){
+        //             tmp.ctfName = i.eventName;
+        //             tmp.setStartEndTime(DateTime.parse(i.startTime), DateTime.parse(i.endTime));
+
+        //             ChallengeObject tmp2 = ChallengeObject(i.category, i.challengeName);
+        //             tmp2._isSolved = (i.isSolved==1?true:false);
+        //             tmp2._isStarted = (i.isStarted==1?true:false);
+        //             tmp2._isPaused = (i.isPaused==1?true:false);
+        //             if(tmp2.isSolved){
+        //                 print("hi first if");
+
+        //                 tmp2._solveTime = DateTime.parse(i.challengeEndTime);
+        //                 tmp2._timeUsed = DateTime.parse(i.challengeEndTime).difference(DateTime.parse(i.challengeStartTime));
+        //             }
+        //             if(tmp2.isStarted){
+        //                 tmp2._startTime = DateTime.parse(i.challengeStartTime);
+        //             }
+        //             tmp.challenges.add(tmp2);
+        //         }
+        //         else{
+
+        //             this.displayCTFEvents.add(tmp);
+
+        //             tmp = new CTFEventObject();
+        //             ctfName = i.eventName;
+
+        //             tmp.ctfName = i.eventName;
+        //             tmp.setStartEndTime(DateTime.parse(i.startTime), DateTime.parse(i.endTime));
+
+        //             ChallengeObject tmp2 = ChallengeObject(i.category, i.challengeName);
+        //             tmp2._isSolved = (i.isSolved==1?true:false);
+        //             tmp2._isStarted = (i.isStarted==1?true:false);
+        //             tmp2._isPaused = (i.isPaused==1?true:false);
+        //             if(tmp2.isSolved){
+        //                 print("hi else");
+
+        //                 tmp2._solveTime = DateTime.parse(i.challengeEndTime);
+        //                 tmp2._timeUsed = DateTime.parse(i.challengeEndTime).difference(DateTime.parse(i.challengeStartTime));
+        //             }
+        //             if(tmp2.isStarted){
+        //                 tmp2._startTime = DateTime.parse(i.challengeStartTime);
+        //             }
+        //             tmp.challenges.add(tmp2);
+        //         }
+        //     }
+        //     this.displayCTFEvents.add(tmp);
+        // }
+
+    }
+
     void parseStoredEvents(){
         print("Stored CTF Events length: " + storedCTFEvents.length.toString());
         if(storedCTFEvents.length > 0){
-            String ctfName = storedCTFEvents[0].eventName;
-            CTFEventObject tmp = CTFEventObject();
-
+            this.displayCTFEvents.clear();
             for(var i in storedCTFEvents){
-                if(i.eventName == ctfName){
-                    tmp.ctfName = i.eventName;
-                    tmp.setStartEndTime(DateTime.parse(i.startTime), DateTime.parse(i.endTime));
+                CTFEventObject tmp = CTFEventObject();
+                tmp._ctfName = i.eventName;
+                tmp._startTime = DateTime.parse(i.startTime);
+                tmp._endTime = DateTime.parse(i.endTime);
 
-                    ChallengeObject tmp2 = ChallengeObject(i.category, i.challengeName);
-                    tmp2._isSolved = (i.isSolved==1?true:false);
-                    tmp2._isStarted = (i.isStarted==1?true:false);
-                    tmp2._isPaused = (i.isPaused==1?true:false);
-                    if(tmp2.isSolved){
-                        print("hi first if");
+                Future<List<CTFChallengeTable>> d = getChallenges(i.eventName);
+                d.then(
+                    (List<CTFChallengeTable> dd){
+                        for(var ddd in dd){
+                            ChallengeObject dddd = ChallengeObject(ddd.category, ddd.challengeName);
+                            dddd._isSolved = (ddd.isSolved==1?true:false);
+                            dddd._isStarted = (ddd.isStarted==1?true:false);
+                            dddd._isPaused = (ddd.isPaused==1?true:false);
+                            if(dddd.isSolved){
+                                print("hello");
 
-                        tmp2._solveTime = DateTime.parse(i.challengeEndTime);
-                        tmp2._timeUsed = DateTime.parse(i.challengeEndTime).difference(DateTime.parse(i.challengeStartTime));
+                                dddd._solveTime = DateTime.parse(ddd.challengeEndTime);
+                                dddd._timeUsed = DateTime.parse(ddd.challengeEndTime).difference(DateTime.parse(ddd.challengeStartTime));
+                            }
+                            if(dddd.isStarted){
+                                dddd._startTime = DateTime.parse(ddd.challengeStartTime);
+                            }
+                            tmp.challenges.add(dddd);
+                        }
                     }
-                    if(tmp2.isStarted){
-                        tmp2._startTime = DateTime.parse(i.challengeStartTime);
-                    }
-                    tmp.challenges.add(tmp2);
-                }
-                else{
-
-                    this.displayCTFEvents.add(tmp);
-
-                    tmp = new CTFEventObject();
-                    ctfName = i.eventName;
-
-                    tmp.ctfName = i.eventName;
-                    tmp.setStartEndTime(DateTime.parse(i.startTime), DateTime.parse(i.endTime));
-
-                    ChallengeObject tmp2 = ChallengeObject(i.category, i.challengeName);
-                    tmp2._isSolved = (i.isSolved==1?true:false);
-                    tmp2._isStarted = (i.isStarted==1?true:false);
-                    tmp2._isPaused = (i.isPaused==1?true:false);
-                    if(tmp2.isSolved){
-                        print("hi else");
-
-                        tmp2._solveTime = DateTime.parse(i.challengeEndTime);
-                        tmp2._timeUsed = DateTime.parse(i.challengeEndTime).difference(DateTime.parse(i.challengeStartTime));
-                    }
-                    if(tmp2.isStarted){
-                        tmp2._startTime = DateTime.parse(i.challengeStartTime);
-                    }
-                    tmp.challenges.add(tmp2);
-                }
+                ).then(
+                    (nothing) => this.displayCTFEvents.add(tmp)
+                );
             }
-            this.displayCTFEvents.add(tmp);
         }
-
     }
 
 	@override
@@ -536,15 +508,25 @@ class _CTFEventsState extends State<CTFEvents>{
 	}
 
     _saveCurrentEvents() async{
-        if(currentNewCTFEvents.length > 0){
-            for(var i in currentNewCTFEvents){
+
+        deleteAllCTFEvent()
+        .then((wat)=>deleteAllChallenges())
+        .then((wat){
+            for(var i in displayCTFEvents){
                 CTFEventObject a = i.eventStatus();
-                for(var chall in a.challenges){
-                    CTFEventTable tmp = CTFEventTable(
+                CTFEventTable tmp = CTFEventTable(
+                    id:                   null,
+                    eventName:            a.ctfName,
+                    startTime:            a.startTime.toIso8601String(),
+                    endTime:              a.endTime.toIso8601String(),
+                    challengeLength:      a.challenges.length,
+                  
+                );
+                insertCTFEvent(tmp);
+                for(var chall in i.challenges){
+                    CTFChallengeTable tmp_chall = CTFChallengeTable(
                         id:                   null,
-                        eventName:            a.ctfName,
-                        startTime:            a.startTime.toIso8601String(),
-                        endTime:              a.endTime.toIso8601String(),
+                        eventName:            i._ctfName,
                         challengeName:        chall.challengeName,
                         category:             chall.category,
                         challengeStartTime:   (chall.startTime==null?null:chall.startTime.toIso8601String()),
@@ -553,25 +535,16 @@ class _CTFEventsState extends State<CTFEvents>{
                         isPaused:             chall.isPaused==true?1:0,
                         isSolved:             chall.isSolved==true?1:0,
                     );
-
-                    /*
-                        2021 Mar 18, only insert happens while saving the state!
-                    */
-                    await insertCTFEvent(tmp);
+                    insertChallenge(tmp_chall);
                 }
             }
-            currentNewCTFEvents.clear();
-
+        }
+        ).then((wat){
             ScaffoldMessenger.of(this.myContext)
                 ..removeCurrentSnackBar()
                 ..showSnackBar(SnackBar(content: Text("Saved successfully")));
-        }
-        else{
-            ScaffoldMessenger.of(this.myContext)
-                ..removeCurrentSnackBar()
-                ..showSnackBar(SnackBar(content: Text("No new event!")));
-        }
-    
+            }  
+        );
     }
 }
 
@@ -1101,10 +1074,107 @@ class _ChallengeTimerState extends State<ChallengeTimer>{
 
 
 class CTFEventTable{
+
+    final String        _tableName = "ctfEvents";
+
 	final int 			id;
 	final String 		eventName;
 	final String 		startTime;
 	final String 		endTime;
+    final int           challengeLength;
+	CTFEventTable(
+		{
+			this.id,
+			this.eventName,
+			this.startTime,
+			this.endTime,
+            this.challengeLength,
+		}
+	);
+
+	// Convert a Dog into a Map. The keys must correspond to the names of the
+	// columns in the database.
+	Map<String, dynamic> toMap() {
+		return {
+			"id":					id,
+			"eventName":			eventName,
+			"startTime":			startTime,
+			"endTime":				endTime,
+            "challengeLength":      challengeLength,
+		};
+	}
+
+
+
+}
+
+// Define a function that inserts dogs into the database
+Future<void> insertCTFEvent(CTFEventTable ctfEvent) async {
+    // Get a reference to the database.
+    final Database db = await the_database;
+    // Insert the Dog into the correct table. You might also specify the
+    // `conflictAlgorithm` to use in case the same dog is inserted twice.
+    //
+    // In this case, replace any previous data.
+    await db.insert(
+        ctfEvent._tableName,
+        ctfEvent.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    print("inserting 1");
+}
+// A method that retrieves all the dogs from the dogs table.
+Future<List<CTFEventTable>> getCTFEvents() async {
+    // Get a reference to the database.
+    final Database db = await the_database;
+    // Query the table for all The Dogs.
+    final List<Map<String, dynamic>> maps = await db.query('ctfEvents');
+
+    // Convert the List<Map<String, dynamic> into a List<Dog>.
+    return List.generate(maps.length, (i) {
+        return CTFEventTable(
+            id: 					maps[i]["id"],
+            eventName: 				maps[i]["eventName"],
+            startTime: 				maps[i]["startTime"],
+            endTime: 				maps[i]["endTime"],
+            challengeLength:        maps[i]["challengeLength"],
+            
+        );
+    });
+}
+
+Future<void> updateCTFEvent(CTFEventTable ctfEvent) async {
+    // Get a reference to the database.
+    final db = await the_database;
+
+    // Update the given Dog.
+    await db.update(
+        ctfEvent._tableName,
+        ctfEvent.toMap(),
+        // Ensure that the Dog has a matching id.
+        where: "id = ?",
+        // Pass the Dog's id as a whereArg to prevent SQL injection.
+        whereArgs: [ctfEvent.id],
+    );
+}
+Future<void> deleteAllCTFEvent() async {
+    // Get a reference to the database.
+    final db = await the_database;
+
+    // Remove the Dog from the Database.
+    await db.delete(
+        "ctfEvents"
+    );
+}
+
+
+
+class CTFChallengeTable{
+
+    final String        _tableName = "eventChallenges";
+
+	final int 			id;
+    final String        eventName;
 	final String 		challengeName;
 	final String 		category;
 	final String 		challengeStartTime;
@@ -1113,12 +1183,10 @@ class CTFEventTable{
 	final int 			isPaused;
 	final int 			isSolved;
 
-	CTFEventTable(
+	CTFChallengeTable(
 		{
 			this.id,
-			this.eventName,
-			this.startTime,
-			this.endTime,
+            this.eventName,
 			this.challengeName,
 			this.category,
 			this.challengeStartTime,
@@ -1134,9 +1202,7 @@ class CTFEventTable{
 	Map<String, dynamic> toMap() {
 		return {
 			"id":					id,
-			"eventName":			eventName,
-			"startTime":			startTime,
-			"endTime":				endTime,
+            "eventName":            eventName,
 			"challengeName":		challengeName,
 			"category":				category,
 			"challengeStartTime":	challengeStartTime,
@@ -1146,4 +1212,46 @@ class CTFEventTable{
 			"isSolved":				isSolved,
 		};
 	}
+}
+
+Future<void> insertChallenge(CTFChallengeTable ctfChallenge) async {
+    final Database db = await the_database;
+
+    print("insert 2");
+    await db.insert(
+        ctfChallenge._tableName,
+        ctfChallenge.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+}
+
+Future<List<CTFChallengeTable>> getChallenges(String eventName) async {
+    final Database db = await the_database;
+
+    final List<Map<String, dynamic>> maps = await db.query(
+        "eventChallenges",
+        where: "eventName = ?",
+        whereArgs: [eventName],
+        );
+
+    return List.generate(maps.length, (i){
+        return CTFChallengeTable(
+            id:                     maps[i]["id"],
+            eventName:              maps[i]["eventName"],    
+            challengeName: 			maps[i]["challengeName"],
+            category: 				maps[i]["category"],
+            challengeStartTime: 	maps[i]["challengeStartTime"],
+            challengeEndTime: 		maps[i]["challengeEndTime"],
+            isStarted: 				maps[i]["isStarted"],
+            isPaused: 				maps[i]["isPaused"],
+            isSolved: 				maps[i]["isSolved"],
+        );
+    });
+}
+
+Future<void> deleteAllChallenges() async{
+    final db = await the_database;
+    await db.delete(
+        "eventChallenges"
+    );
 }
